@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>은행 송금 시뮬레이터</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    background: #F0F4F8;
+    color: #1E293B;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%);
+    color: #fff;
+    padding: 28px 36px 24px;
+    box-shadow: 0 2px 12px rgba(30,64,175,0.25);
+  }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  header p  { margin-top: 6px; font-size: 13px; opacity: 0.8; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 860px;
+    margin: 32px auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 26px 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .card-header h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+  /* ── Concept labels ── */
+  .lbl {
+    font-size: 11px; font-weight: 700; padding: 3px 9px;
+    border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .lbl-blue   { background: #EFF6FF; color: #1D4ED8; }
+  .lbl-orange { background: #FFF7ED; color: #C2410C; }
+  .lbl-green  { background: #ECFDF5; color: #059669; }
+  .lbl-purple { background: #F5F3FF; color: #7C3AED; }
+
+  /* ── Accounts grid ── */
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 14px;
+  }
+  .account-card {
+    background: #F8FAFF;
+    border: 1.5px solid #DBEAFE;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .account-card.updated {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+  .account-id      { font-size: 11px; color: #94A3B8; margin-bottom: 6px; }
+  .account-name    { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .account-balance { font-size: 22px; font-weight: 800; color: #1D4ED8; }
+
+  /* ── Refresh button ── */
+  .btn-refresh {
+    background: none;
+    border: 1.5px solid #CBD5E1;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-refresh:hover { border-color: #2563EB; color: #2563EB; }
+
+  /* ── Transfer form ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 13px; font-weight: 600; color: #475569; }
+  select, input[type="number"] {
+    padding: 10px 12px;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  select:focus, input:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .btn-transfer {
+    background: #2563EB;
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-transfer:hover  { background: #1D4ED8; }
+  .btn-transfer:active { transform: scale(0.97); }
+
+  /* ── Result message ── */
+  .result-msg {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .result-msg.success { display:block; background:#ECFDF5; color:#065F46; border:1.5px solid #6EE7B7; }
+  .result-msg.error   { display:block; background:#FEF2F2; color:#991B1B; border:1.5px solid #FCA5A5; }
+
+  /* ── SQL Flow Panel ── */
+  .sql-panel {
+    margin-top: 18px;
+    background: #0F172A;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 2;
+    position: relative;
+  }
+  .sql-panel .panel-label {
+    position: absolute; top: -11px; left: 16px;
+    background: #0F172A; color: #94A3B8;
+    font-family: -apple-system, sans-serif;
+    font-size: 11px; font-weight: 700;
+    padding: 0 8px; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .kw   { color: #60A5FA; }        /* SQL 키워드 */
+  .cmt  { color: #475569; }        /* 주석 */
+  .val  { color: #34D399; }        /* 값/변수 */
+  .step { color: #E2E8F0; }        /* 일반 텍스트 */
+
+  /* ── History table ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #F8FAFC; }
+  th, td   { padding: 11px 14px; text-align: left; border-bottom: 1px solid #F1F5F9; font-size: 13.5px; }
+  th       { font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; }
+  tbody tr:hover { background: #F8FAFC; }
+  .amt    { font-weight: 700; color: #DC2626; }
+  .muted  { color: #94A3B8; font-size: 12px; }
+  .empty  { text-align: center; color: #94A3B8; padding: 36px 14px; font-size: 14px; }
+
+  @media (max-width: 620px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .btn-transfer { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💰 은행 송금 시뮬레이터</h1>
+  <p>PostgreSQL · Node.js · Express &nbsp;|&nbsp; DB 설계 과제 데모</p>
+  <div class="badge-row">
+    <span class="badge">✅ DBMS 연동 (pg Pool)</span>
+    <span class="badge">🔗 Relation (FK: accounts ↔ transfers)</span>
+    <span class="badge">🔍 Query (SELECT / JOIN / INSERT)</span>
+    <span class="badge">⚡ Transaction (BEGIN · COMMIT · ROLLBACK)</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── 계좌 현황 ── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>🏦 계좌 현황 &nbsp;<span class="lbl lbl-blue">Relation</span></h2>
+      <button class="btn-refresh" onclick="refresh()">↻ 새로고침</button>
+    </div>
+    <div class="accounts-grid" id="accounts-grid">
+      <p style="color:#94A3B8">로딩 중...</p>
+    </div>
+  </div>
+
+  <!-- ── 송금 폼 ── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>💸 송금하기 &nbsp;<span class="lbl lbl-orange">Transaction</span></h2>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>보내는 계좌</label>
+        <select id="from-account"></select>
+      </div>
+      <div class="form-group">
+        <label>받는 계좌</label>
+        <select id="to-account"></select>
+      </div>
+      <div class="form-group">
+        <label>금액 (원)</label>
+        <input type="number" id="amount" placeholder="예: 100000" min="1" />
+      </div>
+      <button class="btn-transfer" onclick="handleTransfer()">송금 ▶</button>
+    </div>
+
+    <div class="result-msg" id="result-msg"></div>
+
+    <!-- 트랜잭션 흐름 시각화 -->
+    <div class="sql-panel">
+      <span class="panel-label">트랜잭션 실행 흐름 (송금 버튼 클릭 시)</span>
+      <span class="cmt">-- server.js / POST /api/transfer</span><br>
+      <span class="kw">BEGIN</span>;<br>
+      &nbsp;&nbsp;<span class="cmt">-- ① 잔액 확인 + 행 잠금 (동시 송금 충돌 방지)</span><br>
+      &nbsp;&nbsp;<span class="kw">SELECT</span> <span class="step">balance FROM accounts WHERE id =</span> <span class="val">$fromId</span> <span class="kw">FOR UPDATE</span>;<br>
+      &nbsp;&nbsp;<span class="cmt">-- ② 송금자 차감</span><br>
+      &nbsp;&nbsp;<span class="kw">UPDATE</span> <span class="step">accounts SET balance = balance -</span> <span class="val">$amount</span> <span class="kw">WHERE</span> <span class="step">id =</span> <span class="val">$fromId</span>;<br>
+      &nbsp;&nbsp;<span class="cmt">-- ③ 수신자 증가</span><br>
+      &nbsp;&nbsp;<span class="kw">UPDATE</span> <span class="step">accounts SET balance = balance +</span> <span class="val">$amount</span> <span class="kw">WHERE</span> <span class="step">id =</span> <span class="val">$toId</span>;<br>
+      &nbsp;&nbsp;<span class="cmt">-- ④ 송금 이력 기록 (transfers 테이블 INSERT)</span><br>
+      &nbsp;&nbsp;<span class="kw">INSERT INTO</span> <span class="step">transfers (from_account_id, to_account_id, amount)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">VALUES</span> (<span class="val">$fromId</span>, <span class="val">$toId</span>, <span class="val">$amount</span>);<br>
+      <span class="kw" style="color:#34D399">COMMIT</span>;
+      &nbsp;<span class="cmt">-- 전부 성공 시 / 실패 시 →</span>
+      <span class="kw" style="color:#F87171">ROLLBACK</span>;
+    </div>
+  </div>
+
+  <!-- ── 송금 내역 ── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📋 송금 내역 &nbsp;<span class="lbl lbl-green">Query (JOIN)</span></h2>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>보낸 사람</th>
+          <th>받은 사람</th>
+          <th>금액</th>
+          <th>일시</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr><td colspan="5" class="empty">송금 내역이 없습니다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+  let accountsData = [];
+
+  /* ── 계좌 목록 로드 ── */
+  async function loadAccounts() {
+    try {
+      const res  = await fetch('/api/accounts');
+      accountsData = await res.json();
+
+      // 카드 렌더링
+      const grid = document.getElementById('accounts-grid');
+      grid.innerHTML = accountsData.map(a => `
+        <div class="account-card" id="acc-${a.id}">
+          <div class="account-id">계좌 ID: ${a.id}</div>
+          <div class="account-name">${a.name}</div>
+          <div class="account-balance">₩${Number(a.balance).toLocaleString()}</div>
+        </div>
+      `).join('');
+
+      // 드롭다운 채우기
+      const opts = accountsData.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      document.getElementById('from-account').innerHTML = opts;
+      document.getElementById('to-account').innerHTML   = opts;
+      if (accountsData.length >= 2) document.getElementById('to-account').selectedIndex = 1;
+
+    } catch (e) {
+      document.getElementById('accounts-grid').innerHTML =
+        '<p style="color:#DC2626">⚠️ 서버 연결 실패. 서버가 실행 중인지 확인하세요. (<code>npm start</code>)</p>';
+    }
+  }
+
+  /* ── 송금 내역 로드 ── */
+  async function loadTransfers() {
+    try {
+      const res       = await fetch('/api/transfers');
+      const transfers = await res.json();
+      const tbody     = document.getElementById('history-body');
+
+      if (!transfers.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">송금 내역이 없습니다</td></tr>';
+        return;
+      }
+      tbody.innerHTML = transfers.map(t => `
+        <tr>
+          <td class="muted">${t.id}</td>
+          <td><strong>${t.from_name}</strong></td>
+          <td><strong>${t.to_name}</strong></td>
+          <td class="amt">₩${Number(t.amount).toLocaleString()}</td>
+          <td class="muted">${t.created_at}</td>
+        </tr>
+      `).join('');
+    } catch (e) { /* 무시 */ }
+  }
+
+  /* ── 송금 처리 ── */
+  async function handleTransfer() {
+    const fromId = document.getElementById('from-account').value;
+    const toId   = document.getElementById('to-account').value;
+    const amount = document.getElementById('amount').value;
+    const msgEl  = document.getElementById('result-msg');
+
+    msgEl.className   = 'result-msg';
+    msgEl.textContent = '처리 중...';
+    msgEl.style.display = 'block';
+
+    try {
+      const res  = await fetch('/api/transfer', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ fromId: Number(fromId), toId: Number(toId), amount: Number(amount) }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        msgEl.className   = 'result-msg success';
+        msgEl.textContent = data.message;
+        document.getElementById('amount').value = '';
+
+        // 변경된 카드 하이라이트
+        [fromId, toId].forEach(id => {
+          const el = document.getElementById('acc-' + id);
+          if (el) { el.classList.add('updated'); setTimeout(() => el.classList.remove('updated'), 1500); }
+        });
+
+        await loadAccounts();
+        await loadTransfers();
+      } else {
+        msgEl.className   = 'result-msg error';
+        msgEl.textContent = data.error;
+      }
+    } catch (err) {
+      msgEl.className   = 'result-msg error';
+      msgEl.textContent = '⚠️ 서버 연결 오류: ' + err.message;
+    }
+  }
+
+  function refresh() { loadAccounts(); loadTransfers(); }
+
+  // 초기 로드
+  loadAccounts();
+  loadTransfers();
+</script>
+</body>
+</html>

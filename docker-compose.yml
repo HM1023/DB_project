@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 데이터베이스 컨테이너
+  postgres-db:
+    image: postgres:15
+    container_name: bank-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: bankdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - bank-network
+
+  # 2. Node.js 백엔드 서버 컨테이너
+  backend-server:
+    image: node:18
+    container_name: bank-backend
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
+      - DB_NAME=bankdb
+      - DB_PORT=5432
+    command: sh -c "npm install && node server.js"
+    depends_on:
+      - postgres-db
+    networks:
+      - bank-network
+
+networks:
+  bank-network:
+    driver: bridge
